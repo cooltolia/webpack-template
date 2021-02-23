@@ -1,0 +1,30 @@
+mixin picture-helper(images, lazyload = false)
+    if (lazyload)
+        picture
+            source(
+                data-srcset=require(`@/assets/images/${images.desktop}`)
+                media='(min-width: 1280px)'
+            )
+            source(
+                data-srcset=require(`@/assets/images/${images.tablet}`)
+                media='(min-width: 768px)'
+            )
+            img(
+                data-src=require(`@/assets/images/${images.mobile}`)
+                alt=""
+            )
+    else
+        picture
+            source(
+                srcset=require(`@/assets/images/${images.mobile}`)
+                media='(min-width: 1280px)'
+            )
+            source(
+                srcset=require(`@/assets/images/${images.tablet}`)
+                media='(min-width: 768px)'
+            )
+            img(
+                src=require(`@/assets/images/${images.mobile}`)
+                alt=""
+            )
+    

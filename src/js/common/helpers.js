@@ -1,0 +1,260 @@
+export const debounce = function (func, wait, immediate) {
+    let timeout;
+    return function () {
+        const context = this,
+            args = arguments;
+        const later = function () {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+};
+
+export const throttle = function (func, wait, options) {
+    let context, args, result;
+    let timeout = null;
+    let previous = 0;
+    if (!options) options = {};
+    const later = function () {
+        previous = options.leading === false ? 0 : Date.now();
+        timeout = null;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+    };
+    return function () {
+        const now = Date.now();
+        if (!previous && options.leading === false) previous = now;
+        const remaining = wait - (now - previous);
+        context = this;
+        args = arguments;
+        if (remaining <= 0 || remaining > wait) {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+            previous = now;
+            result = func.apply(context, args);
+            if (!timeout) context = args = null;
+        } else if (!timeout && options.trailing !== false) {
+            timeout = setTimeout(later, remaining);
+        }
+        return result;
+    };
+};
+
+export const setCookie = function (key, value, expiry) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + expiry * 24 * 60 * 60 * 1000);
+    document.cookie =
+        key + '=' + value + '; path=/ ;expires=' + expires.toUTCString();
+};
+
+export function createNewEvent(eventName, data) {
+    (function () {
+        if (typeof window.CustomEvent === 'function') return false;
+
+        function CustomEvent(event, params) {
+            params = params || {
+                bubbles: false,
+                cancelable: false,
+                detail: undefined,
+            };
+            const evt = document.createEvent('CustomEvent');
+            evt.initCustomEvent(
+                event,
+                params.bubbles,
+                params.cancelable,
+                params.detail
+            );
+            return evt;
+        }
+
+        CustomEvent.prototype = window.Event.prototype;
+
+        window.CustomEvent = CustomEvent;
+    })();
+
+    let event = new CustomEvent(eventName, data);
+    return event;
+}
+
+// function numberWithSpaces(n) {
+//     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+// }
+
+export function lazyLoadImages(imagesNodes, opts = {}) {
+    const options = {
+        rootMargin: opts.rootMargin || '0px 0px 100% 0px',
+        root: opts.root || null,
+        threshold: opts.threshold || 0,
+    };
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const image = entry.target;
+                        const src = image.getAttribute('data-src');
+                        if (!src) return;
+
+                        image.addEventListener('load', () => {
+                            image.classList.add('loaded');
+                            observer.unobserve(entry.target);
+                        });
+                        image.src = src;
+                    }
+                });
+            },
+            {
+                rootMargin: options.rootMargin,
+                root: options.root,
+                threshold: options.threshold,
+            }
+        );
+        imagesNodes.forEach(image => observer.observe(image));
+    } else {
+        imagesNodes.forEach(image => {
+            const src = image.getAttribute('data-src');
+            if (!src) return;
+            image.src = src;
+            image.classList.add('loaded');
+        });
+    }
+}
+
+export function lazyLoadPictures(imagesContainers, opts = {}) {
+    const options = {
+        rootMargin: opts.rootMargin || '0px 0px 100% 0px',
+        root: opts.root || null,
+        threshold: opts.threshold || 0,
+    };
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const imageContainer = entry.target;
+                        const image = imageContainer.querySelectorAll(
+                            'img, source'
+                        );
+
+                        image.forEach(img => {
+                            if (img.dataset && img.dataset.src) {
+                                img.src = img.dataset.src;
+                            }
+
+                            if (img.dataset && img.dataset.srcset) {
+                                img.srcset = img.dataset.srcset;
+                            }
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            {
+                rootMargin: options.rootMargin,
+                root: options.root,
+                threshold: options.threshold,
+            }
+        );
+
+        imagesContainers.forEach(container => observer.observe(container));
+    } else {
+        imagesContainers.forEach(container => {
+            const image = container.querySelector('img');
+            const source = container.querySelector('source');
+
+            image.src = source.dataset.srcset;
+        });
+    }
+}
+
+// function forwardingZero(val) {
+//     return val < 10 ? '0' + val : val;
+// }
+
+// function triggerAnimation(items, opts = {}) {
+//     const options = {
+//         rootMargin: opts.rootMargin || '0px 0px -20% 0px',
+//         root: opts.root || null,
+//         threshold: opts.threshold || 0,
+//     };
+
+//     if ('IntersectionObserver' in window) {
+//         const observer = new IntersectionObserver(
+//             entries => {
+//                 entries.forEach(entry => {
+//                     if (entry.isIntersecting) {
+//                         entry.target.classList.add('animated');
+
+//                         observer.unobserve(entry.target);
+//                     }
+//                 });
+//             },
+//             { rootMargin: options.rootMargin, root: options.root, threshold: options.threshold }
+//         );
+//         items.forEach(item => observer.observe(item));
+//     } else {
+//         setTimeout(() => {
+//             items.forEach(item => {
+//                 item.classList.add('animated');
+//             });
+//         }, 300)
+//     }
+// }
+
+/**
+ * Returns an array with arrays of the given size.
+ *
+ * @param {[]} arr  array to split
+ * @param {number} chunk_size  Size of every group
+ */
+export function chunkArray(arr, chunk_size) {
+    let index = 0;
+    const arrayLength = arr.length;
+    let tempArray = [];
+
+    for (index = 0; index < arrayLength; index += chunk_size) {
+        const chunk = arr.slice(index, index + chunk_size);
+        tempArray.push(chunk);
+    }
+
+    return tempArray;
+}
+
+export function emptyDiv() {
+    return document.createElement('div')
+}
+
+export function generateCustomDots(slider, parentNode, slideClass) {
+    const slidesArray = [...parentNode.querySelectorAll(slideClass)];
+    const sliderDots = parentNode.querySelector('.slider-dots');
+
+    slidesArray.forEach((_, index) => {
+        const dotButton = document.createElement('button');
+        if (index === 0) dotButton.classList.add('is-selected');
+        sliderDots.appendChild(dotButton);
+    });
+
+    const dotsArray = [...sliderDots.children];
+
+    slider.on('select', function () {
+        const previousSelectedDot = sliderDots.querySelector('.is-selected');
+        const selectedDot = sliderDots.children[slider.selectedIndex];
+        previousSelectedDot.classList.remove('is-selected');
+        selectedDot.classList.add('is-selected');
+    });
+
+    sliderDots.addEventListener('click', function (e) {
+        if (!e.target.matches('button')) {
+            return;
+        }
+        const index = dotsArray.indexOf(e.target);
+        slider.select(index);
+    });
+}
