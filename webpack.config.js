@@ -27,6 +27,16 @@ const optimization = () => {
     return config;
 };
 
+const jsLoaders = () => {
+    const loaders = ['webpack-import-glob-loader'];
+
+    if (isProd) {
+        loaders.unshift('babel-loader');
+    }
+
+    return loaders;
+};
+
 const PAGES_DIR = path.resolve(__dirname + '/src/pug/pages/');
 const PAGES = fs
     .readdirSync(PAGES_DIR)
@@ -124,7 +134,7 @@ module.exports = {
             {
                 test: /\.js$/,
                 exclude: /node_modules/,
-                use: ['babel-loader', 'webpack-import-glob-loader'],
+                use: jsLoaders(),
             },
             {
                 test: /\.(sa|sc|c)ss$/,
