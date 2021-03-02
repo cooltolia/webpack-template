@@ -141,12 +141,22 @@ module.exports = {
                 use: [
                     {
                         loader: MiniCssExtractPlugin.loader,
-                        options: {
-                            publicPath: '/',
-                        },
                         // options: {
                         //     publicPath: path.resolve(__dirname, './'),
                         // },
+                        /** dirty solution, otherwise got absolute paths in css on build */
+                        publicPath: (resourcePath, context) => {
+                            if (isDev) {
+                                return '/';
+                            } else {
+                                return (
+                                    path.relative(
+                                        path.dirname(resourcePath),
+                                        context
+                                    ) + '/'
+                                );
+                            }
+                        },
                     },
                     // 'style-loader',
                     {
