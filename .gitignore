@@ -8,5 +8,4 @@
 
 ./dist
 ./node_modules
-./dist
-deploy.js
+deploy-config.js
