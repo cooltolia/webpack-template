@@ -7,14 +7,18 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+// const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const isDev = process.env.NODE_ENV === 'development';
 const isProd = !isDev;
 
 const optimization = () => {
+    const vendorsToExclude = []; // For example ['Inputmask', 'Dropzone'];
     const config = {
         splitChunks: {
-            chunks: 'all',
+            chunks(chunk) {
+                return !vendorsToExclude.includes(chunk.name);
+            },
             name: 'vendor',
         },
     };
@@ -65,6 +69,7 @@ const plugins = [
             template: `${PAGES_DIR}/${page}`,
             filename: `./${pageName}.html`,
             inject: 'body',
+            scriptLoading: 'blocking',
             templateParameters: data,
         });
     }),
@@ -80,6 +85,7 @@ const plugins = [
             },
         ],
     }),
+    // new BundleAnalyzerPlugin(),
 ];
 
 if (isDev) {
@@ -91,7 +97,7 @@ module.exports = {
     entry: '/src/js/index.js',
     output: {
         filename: 'assets/js/[name].bundle.js',
-        chunkFilename: 'assets/js/vendor.bundle.js',
+        // chunkFilename: 'assets/js/vendor.bundle.js',
         path: path.resolve(__dirname, './dist'),
     },
     target: 'web',
@@ -145,17 +151,19 @@ module.exports = {
                         //     publicPath: path.resolve(__dirname, './'),
                         // },
                         /** dirty solution, otherwise got absolute paths in css on build */
-                        publicPath: (resourcePath, context) => {
-                            if (isDev) {
-                                return '/';
-                            } else {
-                                return (
-                                    path.relative(
-                                        path.dirname(resourcePath),
-                                        context
-                                    ) + '/'
-                                );
-                            }
+                        options: {
+                            publicPath: (resourcePath, context) => {
+                                if (isDev) {
+                                    return '/';
+                                } else {
+                                    return (
+                                        path.relative(
+                                            path.dirname(resourcePath),
+                                            context
+                                        ) + '//'
+                                    );
+                                }
+                            },
                         },
                     },
                     // 'style-loader',
@@ -177,7 +185,8 @@ module.exports = {
                 test: /\.(png|jpg|jpeg|webp|aviff|svg)$/,
                 type: 'asset/resource',
                 generator: {
-                    filename: 'assets/images/[name][hash][ext]',
+                    // filename: 'assets/images/[name][hash][ext]',
+                    filename: 'assets/images/[contenthash][ext]',
                 },
             },
 
