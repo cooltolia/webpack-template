@@ -12,15 +12,16 @@ rimraf('src/assets/images/svg/clean-svg', () => {});
             imageminSvgo({
                 plugins: [
                     { removeAttrs: { attrs: '(fill|stroke)' } },
+                    { removeViewBox: false },
                     {
                         cleanupIDs: {
                             remove: true,
                             minify: true,
                             prefix: {
                                 toString() {
-                                    this.counter = this.counter || 0
-                                    return 'id' + this.counter++
-                                }
+                                    this.counter = this.counter || 0;
+                                    return 'id' + this.counter++;
+                                },
                             },
                             force: true,
                         },
