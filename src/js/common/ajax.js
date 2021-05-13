@@ -1,7 +1,21 @@
+export { getData, postData, loadModal, loadYandexMap };
+
+/**
+ *
+ *
+ * @param {String} url
+ * @param {Object} options
+ * @param {String} [options.method = post]
+ * @param {Object} [options.headers]
+ * @param {URLSearchParams | FormData} [options.body]
+ * @returns {Promise}
+ */
 function postData(url, options) {
     const requestOptions = {
         method: 'POST',
-        headers: options.headers || { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: options.headers || {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: options.body,
     };
     return fetch(url, requestOptions).then(response => {
@@ -23,6 +37,17 @@ function getData(url, options) {
     );
 }
 
+function loadModal(url) {
+    return new Promise(resolve => {
+        getData(url).then(data => {
+            const modalHtml = data.html;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            resolve();
+        });
+    });
+}
+
 function loadYandexMap(url) {
     return new Promise(resolve => {
         if (window.yandexMapIsLoading) {
@@ -33,7 +58,7 @@ function loadYandexMap(url) {
             // const yandexMapUrl = url;
             window.yandexMapIsLoading = true;
             const yandexMapUrl =
-                'https://api-maps.yandex.ru/2.1/?apikey=713c8b1e-20ad-4956-9eb3-9af554ea9153&lang=ru_RU';
+                'https://api-maps.yandex.ru/2.1/?apikey=fddd1435-ad6a-45b6-90bd-e886baf1bd4b&lang=ru_RU';
             const yandexMapScript = document.createElement('script');
             yandexMapScript.type = 'text/javascript';
             yandexMapScript.src = yandexMapUrl;
@@ -41,56 +66,8 @@ function loadYandexMap(url) {
 
             yandexMapScript.onload = function () {
                 window.yandexMapIsLoading = false;
-                console.log('resolved');
                 resolve();
             };
-        }
-    });
-}
-
-function loadMapBox() {
-    return new Promise(resolve => {
-        if (window.mapBoxIsLoading) {
-            setTimeout(() => resolve(loadMapBox()), 1000);
-        } else if (typeof mapboxgl !== 'undefined') {
-            resolve();
-        } else {
-            // const yandexMapUrl = url;
-            window.mapBoxIsLoading = true;
-            const scriptUrl = 'https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js';
-            const $script = document.createElement('script');
-            $script.type = 'text/javascript';
-            $script.src = scriptUrl;
-
-            const styleUrl = 'https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css';
-            const $style = document.createElement('link');
-            $style.rel = 'stylesheet';
-            $style.href = styleUrl;
-
-            const scriptLoader = new Promise(resolve => {
-                document.body.appendChild($script);
-                $script.onload = function () {
-                    console.log('script resolved');
-                    resolve();
-                };
-            });
-
-            const styleLoader = new Promise((resolve, reject) => {
-                document.body.appendChild($style);
-                $style.addEventListener('load', function () {
-                    console.log('style resolved');
-                    resolve();
-                });
-            });
-
-            Promise.all([scriptLoader, styleLoader])
-                .then(() => {
-                    window.mapBoxIsLoading = false;
-                    resolve()
-                })
-                .catch(e => {
-                    console.log('Карта не загрузилась, печаль');
-                });
         }
     });
 }

@@ -1,23 +1,25 @@
+import { getScrollbarWidth } from '@/js/common/plugins';
+import MicroModal from 'micromodal';
+
+/**
+ * @type {HTMLElement[]}
+ */
+const fixedNodes = [
+    document.querySelector('.fixed-header'),
+];
+
 function onModalOpen(modal) {
-    const scrollBarWidth = $$.getScrollbarWidth();
+    const scrollBarWidth = getScrollbarWidth();
+
     document.body.style.paddingRight = scrollBarWidth + 'px';
-
-    // if (modal) modal.children[0].style.paddingRight = scrollBarWidth + 'px';
-
-    const fixedNodes = [document.querySelector('.fixed-header')];
-    fixedNodes.forEach((node) => {
+    modal.children[0].style.paddingRight = scrollBarWidth + 'px';
+    fixedNodes.forEach(node => {
         if (node) node.style.paddingRight = scrollBarWidth + 'px';
     });
 }
 
 function onModalClose(modal, remove = true, modalCopy) {
-    // modal.children[0].style.paddingRight = null;
-    document.body.style.paddingRight = null;
-
-    const fixedNodes = [document.querySelector('.fixed-header')];
-    fixedNodes.forEach((node) => {
-        if (node) node.style.paddingRight = null;
-    });
+    resetPadding();
 
     if (remove) {
         modal.addEventListener('animationend', function removeModal() {
@@ -35,41 +37,82 @@ function onModalClose(modal, remove = true, modalCopy) {
             document.body.append(modalCopy);
         });
     }
-}
 
-function loadModal(url) {
-    return new Promise((resolve) => {
-        getData(url).then((data) => {
-            debugger;
-            const modalHtml = data.html;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
+    function resetPadding() {
+        document.body.style.paddingRight = null;
+        modal.children[0].style.paddingRight = null;
 
-            resolve();
+        fixedNodes.forEach(node => {
+            if (node) node.style.paddingRight = null;
         });
-    });
+    }
 }
+
+/**
+ * This callback type is called `requestCallback` and is displayed as a global symbol.
+ *
+ * @callback onShowCallback
+ * @param {HTMLElement} modal
+ * @param {HTMLButtonElement | HTMLElement} trigger
+ * @param {any} [args]
+ */
+
+/**
+ * This callback type is called `requestCallback` and is displayed as a global symbol.
+ *
+ * @callback onCloseCallback
+ * @param {HTMLElement} modal
+ */
 
 /**
  *
  * @param {String} id - id of modal
  * @param {Object} [props]
- * @param {Function} [props.onShow] callback to fire when modal is shown
- * @param {Function} [props.onClose] callback to fire when modal is closed
+ * @param {onShowCallback} [props.onShown] callback to fire when modal is shown
+ * @param {onCloseCallback} [props.onClosed] callback to fire when modal is closed
  * @param {Boolean} [props.removeOnClose = false] Boolean to remove node from DOM
  */
-MicroModal.showModal = function(id, { onShow = null, onClose = null, removeOnClose = false } = {}) {
-    this.show(id, {
+function showModal(
+    id,
+    { onShown = null, onClosed = null, removeOnClose = false } = {}
+) {
+    MicroModal.show(id, {
         disableScroll: true,
         disableFocus: true,
         awaitCloseAnimation: true,
+        /**
+         * @param {HTMLElement} modal
+         * @param {HTMLElement} trigger
+         */
         onShow(modal, trigger) {
             onModalOpen(modal);
-            if (typeof onShow === 'function') onShow(modal, trigger, ...arguments);
+            if (typeof onShown === 'function')
+                onShown(modal, trigger, ...arguments);
         },
+        /**
+         * @param {HTMLElement} modal
+         * @param {HTMLElement} trigger
+         */
         onClose(modal) {
             onModalClose(modal, removeOnClose);
-            if (typeof onClose === 'function') onClose(modal);
+            if (typeof onClosed === 'function') onClosed(modal);
         },
     });
-};
+}
 
+function closeModal(id) {
+    return new Promise(resolve => {
+        const modal = document.querySelector(`#${id}`);
+        MicroModal.close(id);
+
+        modal.addEventListener('animationend', function onClose() {
+            resolve()
+            this.removeEventListener('animationend', onClose);
+        });
+    });
+}
+
+export default {
+    showModal,
+    closeModal,
+};

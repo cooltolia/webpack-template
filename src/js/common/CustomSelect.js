@@ -1,10 +1,13 @@
+import { fadeOut, fadeToggle } from '@/js/common/plugins';
+
 export default class CustomSelect {
     /**
      * @param {HTMLElement} select
      * @param {Object} options
-     * @param {Boolean} options.multiple - multiple choises
-     * @param {String} options.multipleCounterLabel
-     * @param {Function} options.onSelect - callback for selected element
+     * @param {Boolean} [options.multiple] - multiple choises
+     * @param {String} [options.multipleCounterLabel]
+     * @param {String} options.valueType - if defined set to value clicked el's data-valueType
+     * @param {Function} [options.onSelect] - callback for selected element
      */
 
     constructor(select, options = {}) {
@@ -18,16 +21,20 @@ export default class CustomSelect {
     }
 
     setup() {
+        /** @type {HTMLInputElement} */
         this.valueInput = this.select.querySelector('.custom-select__value');
+        /** @type {HTMLButtonElement } */
         this.selected = this.select.querySelector('.custom-select__selected');
+        /** @type {HTMLDivElement } */
         this.dropdown = this.select.querySelector('.custom-select__dropdown');
+        /** @type { HTMLUListElement & { children: HTMLLIElement[] } } */
         this.optionsList = this.select.querySelector('.custom-select__options');
 
         this.inititalPlaceholder = this.selected.textContent.trim();
 
-        new SimpleBar(this.dropdown, {
-            autoHide: false,
-        });
+        // new SimpleBar(this.dropdown, {
+        //     autoHide: false,
+        // });
 
         /** keycodes */
         this.keyCodes = {
@@ -46,51 +53,71 @@ export default class CustomSelect {
     }
 
     setEventHandlers() {
-        this.selected.addEventListener('keydown', e => this.toggleOptionsList(e));
+        this.selected.addEventListener('keydown', e =>
+            this.toggleOptionsList(e)
+        );
         this.selected.addEventListener('click', e => this.toggleOptionsList(e));
 
-        this.optionsList.addEventListener('click', e => {
-            const target = e.target;
-
-            if (target.classList.contains('custom-select__option')) {
-                this.selectItem(e);
-            }
-        });
-
-        this.optionsList.addEventListener('keydown', e => {
-            const target = e.target;
-
-            if (target.classList.contains('custom-select__option')) {
-                switch (e.keyCode) {
-                    case this.keyCodes.enter:
-                        this.selectItem(e);
-
-                        return;
-
-                    case this.keyCodes.down_arrow:
-                        e.preventDefault();
-
-                        this.focusNextListItem(this.keyCodes.down_arrow);
-                        return;
-
-                    case this.keyCodes.up_arrow:
-                        e.preventDefault();
-
-                        this.focusNextListItem(this.keyCodes.up_arrow);
-                        return;
-
-                    case this.keyCodes.escape:
-                        this.closeOptionsList();
-                        return;
-
-                    default:
-                        return;
+        this.optionsList.addEventListener(
+            'click',
+            /**
+             *
+             * @param { MouseEvent & { target: HTMLLIElement } } e
+             */
+            e => {
+                const target = e.target;
+                if (target.classList.contains('custom-select__option')) {
+                    this.selectItem(e);
                 }
             }
-        });
+        );
+
+        this.optionsList.addEventListener(
+            'keydown',
+            /**
+             *
+             * @param { KeyboardEvent & { target: HTMLLIElement } } e
+             */
+            e => {
+                const target = e.target;
+
+                if (target.classList.contains('custom-select__option')) {
+                    switch (e.keyCode) {
+                        case this.keyCodes.enter:
+                            this.selectItem(e);
+
+                            return;
+
+                        case this.keyCodes.down_arrow:
+                            e.preventDefault();
+
+                            this.focusNextListItem(this.keyCodes.down_arrow);
+                            return;
+
+                        case this.keyCodes.up_arrow:
+                            e.preventDefault();
+
+                            this.focusNextListItem(this.keyCodes.up_arrow);
+                            return;
+
+                        case this.keyCodes.escape:
+                            this.closeOptionsList();
+                            return;
+
+                        default:
+                            return;
+                    }
+                }
+            }
+        );
 
         document.addEventListener('click', e => {
-            if (!this.select.contains(e.target) && this.dropdown.classList.contains('opened')) {
+            if (!(e.target instanceof HTMLElement)) return;
+
+            if (
+                !this.select.contains(e.target) &&
+                this.dropdown.classList.contains('opened')
+            ) {
                 this.closeOptionsList();
             }
         });
@@ -102,11 +129,16 @@ export default class CustomSelect {
         }
 
         if (e.type === 'click') {
+            this.select.classList.toggle('opened');
             this.dropdown.classList.toggle('opened');
             this.selected.classList.toggle('opened');
 
-            this.dropdown.setAttribute('aria-expanded', this.dropdown.classList.contains('opened'));
-            $$.fadeToggle(this.dropdown);
+            this.dropdown.setAttribute(
+                'aria-expanded',
+                this.dropdown.classList.contains('opened').toString()
+            );
+
+            fadeToggle(this.dropdown);
         }
 
         if (e.keyCode === this.keyCodes.down_arrow) {
@@ -123,28 +155,38 @@ export default class CustomSelect {
     }
 
     closeOptionsList() {
+        this.select.classList.remove('opened');
         this.dropdown.classList.remove('opened');
         this.selected.classList.remove('opened');
-        this.dropdown.setAttribute('aria-expanded', false);
-        $$.fadeOut(this.dropdown);
+        this.dropdown.setAttribute('aria-expanded', 'false');
+        fadeOut(this.dropdown);
     }
 
+    /**
+     *
+     *
+     * @param {number} direction
+     * @memberof CustomSelect
+     */
     focusNextListItem(direction) {
         const activeElement = document.activeElement;
         const options = [...this.optionsList.children];
         if (activeElement.classList.contains('custom-select__selected')) {
-            this.optionsList.children[0].focus();
-        } else {
+            const firstChild = this.optionsList.children[0];
+            firstChild.focus();
+        } else if (activeElement instanceof HTMLLIElement) {
             const currentActiveElementIndex = options.indexOf(activeElement);
             if (direction === this.keyCodes.down_arrow) {
-                const currentActiveElementIsNotLastItem = currentActiveElementIndex < options.length - 1;
+                const currentActiveElementIsNotLastItem =
+                    currentActiveElementIndex < options.length - 1;
                 if (currentActiveElementIsNotLastItem) {
                     const nextListItem = options[currentActiveElementIndex + 1];
 
                     nextListItem.focus();
                 }
             } else if (direction === this.keyCodes.up_arrow) {
-                const currentActiveElementIsNotFirstItem = currentActiveElementIndex > 0;
+                const currentActiveElementIsNotFirstItem =
+                    currentActiveElementIndex > 0;
                 if (currentActiveElementIsNotFirstItem) {
                     const nextListItem = options[currentActiveElementIndex - 1];
                     nextListItem.focus();
@@ -165,7 +207,16 @@ export default class CustomSelect {
     setSelected(value) {
         this.selected.textContent = value;
 
-        if (this.valueInput) this.valueInput.value = value;
+        if (this.valueInput) {
+            if (this.options.valueType) {
+                debugger;
+                this.valueInput.value = this.selected.dataset[
+                    this.options.valueType
+                ];
+            } else {
+                this.valueInput.value = value;
+            }
+        }
     }
 
     clearSelected() {
@@ -188,7 +239,17 @@ export default class CustomSelect {
 
         this.selected.textContent = selectedValue;
 
-        if (this.valueInput) this.valueInput.value = selectedValue;
+        if (this.valueInput) {
+            debugger;
+            if (this.options.valueType) {
+                this.valueInput.value = e.target.dataset[this.options.valueType]
+                    ? e.target.dataset[this.options.valueType]
+                    : 0;
+            } else {
+                this.valueInput.value = selectedValue;
+            }
+        }
+
         this.closeOptionsList();
 
         if (typeof this.options.onSelect === 'function') {
@@ -198,7 +259,9 @@ export default class CustomSelect {
 
     multipleSelectLogic(e, selectedValue) {
         const valueDivider = ';';
-        const action = e.target.classList.contains('selected') ? 'remove' : 'add';
+        const action = e.target.classList.contains('selected')
+            ? 'remove'
+            : 'add';
         if (action === 'remove') {
             e.target.classList.remove('selected');
             this.multipleCounter--;

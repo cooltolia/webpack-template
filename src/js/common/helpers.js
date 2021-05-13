@@ -53,61 +53,41 @@ export const setCookie = function (key, value, expiry) {
         key + '=' + value + '; path=/ ;expires=' + expires.toUTCString();
 };
 
-export function createNewEvent(eventName, data) {
-    (function () {
-        if (typeof window.CustomEvent === 'function') return false;
-
-        function CustomEvent(event, params) {
-            params = params || {
-                bubbles: false,
-                cancelable: false,
-                detail: undefined,
-            };
-            const evt = document.createEvent('CustomEvent');
-            evt.initCustomEvent(
-                event,
-                params.bubbles,
-                params.cancelable,
-                params.detail
-            );
-            return evt;
-        }
-
-        CustomEvent.prototype = window.Event.prototype;
-
-        window.CustomEvent = CustomEvent;
-    })();
-
-    let event = new CustomEvent(eventName, data);
-    return event;
-}
-
 // function numberWithSpaces(n) {
 //     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 // }
-
+/**
+ *
+ *
+ * @export
+ * @param {[HTMLImageElement]} imagesNodes
+ * @param {*} [opts={}]
+ */
 export function lazyLoadImages(imagesNodes, opts = {}) {
     const options = {
-        rootMargin: opts.rootMargin || '0px 0px 100% 0px',
+        rootMargin: opts.rootMargin || '100% 0% 100% 0%',
         root: opts.root || null,
         threshold: opts.threshold || 0,
     };
     if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(
             entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const image = entry.target;
-                        const src = image.getAttribute('data-src');
-                        if (!src) return;
+                entries.forEach(
+                    /** @param {IntersectionObserverEntry & {target: HTMLImageElement}} entry */
+                    entry => {
+                        if (entry.isIntersecting) {
+                            const image = entry.target;
+                            const src = image.getAttribute('data-src');
+                            if (!src) return;
 
-                        image.addEventListener('load', () => {
-                            image.classList.add('loaded');
-                            observer.unobserve(entry.target);
-                        });
-                        image.src = src;
+                            image.addEventListener('load', () => {
+                                image.classList.add('loaded');
+                                observer.unobserve(entry.target);
+                            });
+                            image.src = src;
+                        }
                     }
-                });
+                );
             },
             {
                 rootMargin: options.rootMargin,
@@ -139,9 +119,12 @@ export function lazyLoadPictures(imagesContainers, opts = {}) {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const imageContainer = entry.target;
+
+                        /** @type {NodeListOf<HTMLImageElement>} */
                         const image = imageContainer.querySelectorAll(
                             'img, source'
                         );
+                        const imageTag = imageContainer.querySelector('img');
 
                         image.forEach(img => {
                             if (img.dataset && img.dataset.src) {
@@ -152,7 +135,11 @@ export function lazyLoadPictures(imagesContainers, opts = {}) {
                                 img.srcset = img.dataset.srcset;
                             }
                         });
-                        observer.unobserve(entry.target);
+
+                        imageTag.addEventListener('load', e => {
+                            imageTag.classList.add('loaded');
+                            observer.unobserve(entry.target);
+                        });
                     }
                 });
             },
@@ -174,39 +161,76 @@ export function lazyLoadPictures(imagesContainers, opts = {}) {
     }
 }
 
+/**
+ *
+ *
+ * @export
+ * @param {HTMLElement} section section node to watch for
+ * @param {Object} opts params for IntersectionObserver
+ * @returns {Promise}
+ */
+export function watchSectionEnterViewport(section, opts = {}) {
+    const options = {
+        rootMargin: opts.rootMargin || '100% 0px 100% 0px',
+        root: opts.root || null,
+        threshold: opts.threshold || 0,
+    };
+
+    return new Promise(resolve => {
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        observer.unobserve(section);
+
+                        resolve();
+                    }
+                });
+            }, options);
+            observer.observe(section);
+        } else {
+            resolve();
+        }
+    });
+}
+
 // function forwardingZero(val) {
 //     return val < 10 ? '0' + val : val;
 // }
 
-// function triggerAnimation(items, opts = {}) {
-//     const options = {
-//         rootMargin: opts.rootMargin || '0px 0px -20% 0px',
-//         root: opts.root || null,
-//         threshold: opts.threshold || 0,
-//     };
+export function triggerAnimation(items, opts = {}) {
+    const options = {
+        rootMargin: opts.rootMargin || '0px 0px -20% 0px',
+        root: opts.root || null,
+        threshold: opts.threshold || 0,
+    };
 
-//     if ('IntersectionObserver' in window) {
-//         const observer = new IntersectionObserver(
-//             entries => {
-//                 entries.forEach(entry => {
-//                     if (entry.isIntersecting) {
-//                         entry.target.classList.add('animated');
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animated');
 
-//                         observer.unobserve(entry.target);
-//                     }
-//                 });
-//             },
-//             { rootMargin: options.rootMargin, root: options.root, threshold: options.threshold }
-//         );
-//         items.forEach(item => observer.observe(item));
-//     } else {
-//         setTimeout(() => {
-//             items.forEach(item => {
-//                 item.classList.add('animated');
-//             });
-//         }, 300)
-//     }
-// }
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            {
+                rootMargin: options.rootMargin,
+                root: options.root,
+                threshold: options.threshold,
+            }
+        );
+        items.forEach(item => observer.observe(item));
+    } else {
+        setTimeout(() => {
+            items.forEach(item => {
+                item.classList.add('animated');
+            });
+        }, 300);
+    }
+}
 
 /**
  * Returns an array with arrays of the given size.
@@ -228,7 +252,7 @@ export function chunkArray(arr, chunk_size) {
 }
 
 export function emptyDiv() {
-    return document.createElement('div')
+    return document.createElement('div');
 }
 
 export function generateCustomDots(slider, parentNode, slideClass) {
@@ -257,4 +281,31 @@ export function generateCustomDots(slider, parentNode, slideClass) {
         const index = dotsArray.indexOf(e.target);
         slider.select(index);
     });
+}
+
+export function setCustomViewportUnits(updateOnResize = true) {
+    let resizeTimeout;
+
+    if (updateOnResize) {
+        window.addEventListener('resize', resizeThrottler, false);
+
+        function resizeThrottler() {
+            // ignore resize events as long as an actualResizeHandler execution is in the queue
+            if (!resizeTimeout) {
+                resizeTimeout = setTimeout(function () {
+                    resizeTimeout = null;
+                    actualResizeHandler();
+                }, 66);
+            }
+        }
+    }
+
+    function actualResizeHandler() {
+        let vh = window.innerHeight * 0.01;
+        let vw = document.documentElement.clientWidth * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        document.documentElement.style.setProperty('--vw', `${vw}px`);
+    }
+
+    actualResizeHandler();
 }

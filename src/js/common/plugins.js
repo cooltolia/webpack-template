@@ -2,6 +2,13 @@ let scrollBarWidth = null;
 let currentRequestAnimationFrame;
 
 /**
+ *
+ * @typedef {Object} slideFunctionReturn
+ * @property {Promise} slideFunctionReturn.promise
+ * @property {Function} slideFunctionReturn.cancel - abort animation. Not tested!
+ */
+
+/**
  * @description
  * firstly checks if has cached value in this.scrollBarWidth =>
  * than calcs it if absent
@@ -58,17 +65,18 @@ function fadeIn(el, { display = 'block', speed = 160 } = {}) {
 
     return new Promise(resolve => {
         const animationSpeed = 16 / speed;
-        el.style.opacity = 0;
+        el.style.opacity = '0';
         el.style.display = display;
 
         const fade = () => {
             let id;
             var val = parseFloat(el.style.opacity);
+            console.log(val);
             if (!((val += animationSpeed) > 1)) {
-                el.style.opacity = val;
+                el.style.opacity = val.toString();
                 id = requestAnimationFrame(fade);
             } else {
-                el.style.opacity = 1;
+                el.style.opacity = '1';
                 resolve();
             }
 
@@ -88,17 +96,21 @@ function fadeIn(el, { display = 'block', speed = 160 } = {}) {
 function fadeOut(el, { speed = 160 } = {}) {
     /* no need to hide again an invisible element */
     if (isHidden(el)) return;
+    console.count('fadeOut')
 
     return new Promise(resolve => {
         const animationSpeed = 16 / speed;
-        el.style.opacity = 1;
+        el.style.opacity = '1';
 
         const fade = () => {
             let id;
-            if ((el.style.opacity -= animationSpeed) < 0) {
+            const currentOpacity = parseFloat(el.style.opacity);
+            const newOpacity = currentOpacity - animationSpeed;
+            if (newOpacity < 0) {
                 el.style.display = 'none';
                 resolve();
             } else {
+                el.style.opacity = newOpacity.toString();
                 id = requestAnimationFrame(fade);
             }
 
@@ -114,7 +126,6 @@ function fadeOut(el, { speed = 160 } = {}) {
  * @param {Object} props
  * @param {Number} [props.speed = 200] - animation speed
  * @param {String} [props.display='block'] - display property
- * @returns {Promise}
  */
 function fadeToggle(el, { speed = 200, display = 'block' } = {}) {
     if (isHidden(el)) {
@@ -167,14 +178,10 @@ function toggle(el, { display = 'block', classList = '' } = {}) {
  * @param {Number} [props.speed = 120] - animation speed
  * @param {String} [props.display='block'] - display property
  *
- * @typedef {Object} returnObject
- * @property {Promise} returnObject.promise
- * @property {Function} returnObject.cancel - abort animation. Not tested!
- *
- * @returns {returnObject}
+ * @returns {slideFunctionReturn}
  */
 function slideDown(el, { speed = 120, display = 'block' } = {}) {
-    let resolve, reject;
+    let resolve, reject, cancelled;
     const promise = new Promise((promiseResolve, promiseReject) => {
         resolve = promiseResolve;
         reject = promiseReject;
@@ -192,8 +199,8 @@ function slideDown(el, { speed = 120, display = 'block' } = {}) {
         el.style.display = 'block';
         const height = el.scrollHeight;
 
-        el.style.paddingTop = startPaddingTop;
-        el.style.paddingBottom = startPaddingBottom;
+        el.style.paddingTop = startPaddingTop.toString();
+        el.style.paddingBottom = startPaddingBottom.toString();
 
         const heightAnimationSpeed = (height / speed) * 16;
         const paddingTopAnimationSpeed = (paddingTop / speed) * 16;
@@ -237,14 +244,11 @@ function slideDown(el, { speed = 120, display = 'block' } = {}) {
  * @param {Object} [props]
  * @param {Number} [props.speed = 120] - animation speed
  *
- * @typedef {Object} returnObject
- * @property {Promise} returnObject.promise
- * @property {Function} returnObject.cancel - abort animation. Not tested!
  *
- * @returns {returnObject}
+ * @returns {slideFunctionReturn}
  */
 function slideUp(el, { speed = 120 } = {}) {
-    let resolve, reject;
+    let resolve, reject, cancelled;
     const promise = new Promise((promiseResolve, promiseReject) => {
         resolve = promiseResolve;
         reject = promiseReject;
@@ -314,9 +318,9 @@ function slideToggle(el, { speed = 120, display = 'block' } = {}) {
 
 /**
  * @param {HTMLElement} target - target element to scroll to
- * @param {Number} [offset = 50] - value for top offset
+ * @param {Number} [offset = 100] - value for top offset
  */
-function scrollTo(target, offset = 50) {
+function _scrollTo(target, offset = 100) {
     if (!target) {
         console.log('target: ', target);
         return;
@@ -329,12 +333,74 @@ function scrollTo(target, offset = 50) {
 }
 
 /**
+ * @param {HTMLElement} target - target element to scroll to
+ * @param {Number} [offset = 50] - value for top offset
+ * @param {Number} [duration = 500] - animation speed in ms
+ */
+function scrollTo(target, offset = 100, duration = 500) {
+    return new Promise(resolve => {
+        function move(amount) {
+            document.documentElement.scrollTop = amount;
+            document.body.scrollTop = amount;
+        }
+
+        const scrollPosition = target.getBoundingClientRect().top - offset;
+
+        const start = window.scrollY;
+        const increment = 20;
+        let currentTime = 0;
+
+        const animateScroll = function () {
+            // increment the time
+            currentTime += increment;
+            // find the value with the quadratic in-out easing function
+            const value = easeInOutQuad(
+                currentTime,
+                start,
+                scrollPosition,
+                duration
+            );
+            // move the document.body
+            move(value);
+            // do the animation unless its over
+            if (currentTime < duration) {
+                requestAnimationFrame(animateScroll);
+            } else {
+                const scrollPosition =
+                    target.getBoundingClientRect().top - offset;
+                if (scrollPosition < 0) {
+                    scrollTo(target, offset, duration);
+                } else {
+                    resolve();
+                }
+            }
+        };
+        animateScroll();
+    });
+}
+
+/**
  * @param {HTMLElement} el
  * @returns {Boolean} true if el is hidden via display: none
  */
 function isHidden(el) {
     let style = window.getComputedStyle(el);
     return style.display === 'none';
+}
+
+function delay(time) {
+    return new Promise(res => {
+        setTimeout(res, time);
+    });
+}
+
+function easeInOutQuad(t, b, c, d) {
+    t /= d / 2;
+    if (t < 1) {
+        return (c / 2) * t * t + b;
+    }
+    t--;
+    return (-c / 2) * (t * (t - 2) - 1) + b;
 }
 
 export {
@@ -351,4 +417,5 @@ export {
     scrollTo,
     getScrollbarWidth,
     deviceType,
+    delay,
 };
