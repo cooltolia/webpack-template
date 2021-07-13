@@ -118,7 +118,6 @@ module.exports = {
         inline: true,
         watchContentBase: true,
         open: true,
-        // host: '192.168.31.232', //-  ipconfig => ipv4
     },
     module: {
         rules: [

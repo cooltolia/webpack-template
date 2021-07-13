@@ -9,6 +9,7 @@
     "dev": "cross-env NODE_ENV='development' webpack --mode development",
     "build": "webpack --mode production",
     "start": "cross-env NODE_ENV='development' webpack serve --mode development",
+    "start:host": "yarn start --host 0.0.0.0 --disable-host-check --useLocalIp",
     "deploy": "yarn build && node imagemin.js && node deploy.js",
     "buildsvgsprite": "node imagemin-svgo.js && svgstore -o src/assets/images/svg/svg-sprite.svg src/assets/images/svg/clean-svg/*.svg && rm -rf src/assets/images/svg/clean-svg"
   },
